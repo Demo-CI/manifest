@@ -2,29 +2,32 @@
 
 [![Manifest Validation](https://github.com/Demo-CI/manifest/actions/workflows/validate.yml/badge.svg)](https://github.com/Demo-CI/manifest/actions/workflows/validate.yml)
 
-Simple multi-repository project for exploring GitHub Actions capabilities with C++ calculator application and static library.
+Multi-repository C++ project demonstrating centralized CI/CD with GitHub Actions and Google Repo tool.
 
-## Project Overview
+## 🚀 **Quick Start**
 
-This is a demonstration project that showcases:
-- ✅ Multi-repository management with Google Repo
-- ✅ Centralized build system using GitHub Actions
-- ✅ C++ application with external library dependency
-- ✅ Automated CI/CD workflows
+### Option 1: Multi-Repository Workspace (RECOMMENDED)
+Use Google Repo tool for multi-repository development:
 
-## Repository Structure
+```bash
+# Install repo tool
+curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+chmod +x ~/.local/bin/repo
+export PATH="$HOME/.local/bin:$PATH"
 
-| Repository | Path | Description |
-|------------|------|-------------|
-| **application** | `application/` | Main C++ calculator application |
-| **static_library** | `libs/calculator/` | Calculator math utilities library |
-| **build** | `build/` | Centralized build system and workflows |
-| **toolchain** | `toolchain/` | Development tools and utilities |
+# Setup workspace
+mkdir demo-ci-workspace && cd demo-ci-workspace
+repo init -u https://github.com/Demo-CI/manifest.git
+repo sync
 
-## Quick Start
+# Build everything
+cd build
+./scripts/build.sh build
+./scripts/build.sh test
+```
 
-### Option 1: Individual Repository Development (Recommended)
-For simple development, you can work with individual repositories:
+### Option 2: Individual Repository (Simple)
+Work with individual repositories directly:
 
 ```bash
 # Clone and build the application
@@ -35,81 +38,50 @@ make             # Build application
 make test        # Run tests
 ```
 
-### Option 2: Multi-Repository Workspace with Repo Tool
+## 📋 **Available Manifests**
 
-Install Google's `repo` tool:
-```bash
-# Download and install repo tool
-curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
-chmod +x ~/.local/bin/repo
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Create workspace:
-```bash
-# Create and initialize workspace
-mkdir demo-ci-workspace && cd demo-ci-workspace
-repo init -u https://github.com/Demo-CI/manifest.git
-repo sync
-
-# Build the project
-# Navigate to build directory
-cd build
-./run.sh build all           # Clean → Build → Test → Analyze → Docs
-```
-
-### Workspace Structure (with repo tool)
-
-```
-demo-ci-workspace/
-├── .repo/                 # Repo metadata
-├── application/           # Main calculator application
-├── libs/calculator/       # Static library (from static_library repo)
-├── build/                 # Build system and CI/CD scripts
-└── toolchain/             # Development tools
-```
-
-## Available Manifests
-
-### `default.xml` - Standard Development
+### `default.xml` (Main)
 ```bash
 repo init -u https://github.com/Demo-CI/manifest.git
 ```
 - All repositories from `main` branch
-- Includes all components: application, library, build system, and toolchain
+- Complete development environment
 
-### `minimal.xml` - Application Development Only
+### `minimal.xml` (App Only)
 ```bash
 repo init -u https://github.com/Demo-CI/manifest.git -m minimal.xml
 ```
-- Only application and static library
-- Faster setup for application developers
+- Application and static library only
+- Faster setup for app development
 
-### `development.xml` - Development Branch
+### `development.xml` (Dev Branches)
 ```bash
 repo init -u https://github.com/Demo-CI/manifest.git -m development.xml
 ```
 - Uses `develop` branches for active development
 
-### `production.xml` - Stable Release
+### `production.xml` (Stable)
 ```bash
 repo init -u https://github.com/Demo-CI/manifest.git -m production.xml
 ```
+- Production-ready stable versions
 
-### Useful Repo Commands (if using multi-repo workspace)
+## 🔧 **Repo Commands**
+
 ```bash
 # Sync all repositories
 repo sync
 
-# Check status of all repositories
+# Check status across all repos
 repo status
-
-# Show current manifest
-repo manifest
 
 # List all projects
 repo list
 
-# Execute command across all repos
+# Run command in all repos
 repo forall -c 'git status'
 ```
+
+---
+
+**🔗 Related:** [Centralized Build System](../build) | [Application](../application) | [Static Library](../static_library)
