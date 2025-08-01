@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <!-- Development manifest - all repositories for full development -->
+  <default revision="develop" 
+           remote="github"
+           sync-j="4" />
+
+  <!-- Define the remote source -->
+  <remote name="github"
+          fetch="https://github.com/Demo-CI/" />
+
+  <!-- Project repositories - development branches -->
+  <project name="application"
+           path="application"
+           remote="github"
+           revision="develop">
+    <annotation name="description" value="Main C++ calculator application with external library dependencies" />
+    <annotation name="type" value="application" />
+    <annotation name="language" value="cpp" />
+  </project>
+
+  <project name="static_library" 
+           path="libs/calculator"
+           remote="github"
+           revision="develop">
+    <annotation name="description" value="Reusable mathematical computation functions library" />
+    <annotation name="type" value="library" />
+    <annotation name="language" value="cpp" />
+  </project>
+
+  <project name="build"
+           path="build"
+           remote="github"
+           revision="develop">
+    <annotation name="description" value="Centralized CI/CD system for automated builds and tests" />
+    <annotation name="type" value="build-system" />
+    <annotation name="language" value="github-actions" />
+  </project>
+  
+  <project name="manifest"
+           path="manifest"
+           remote="github"
+           revision="develop">
+    <annotation name="description" value="Multi-repository workspace configuration using Google Repo tool" />
+    <annotation name="type" value="configuration" />
+    <annotation name="language" value="xml" />
+  </project>
+</manifest>

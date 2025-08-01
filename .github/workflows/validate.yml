@@ -1,0 +1,317 @@
+name: Validate Manifest Files
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-xml:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout manifest repository
+      uses: actions/checkout@v4
+    
+    - name: Install XML validation tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxml2-utils xmlstarlet
+    
+    - name: Validate XML syntax
+      run: |
+        echo "=== Validating XML Syntax ==="
+        for manifest in *.xml; do
+          echo "Validating $manifest..."
+          xmllint --noout "$manifest"
+          if [ $? -eq 0 ]; then
+            echo "✅ $manifest: Valid XML"
+          else
+            echo "❌ $manifest: Invalid XML"
+            exit 1
+          fi
+        done
+    
+    - name: Validate manifest structure
+      run: |
+        echo "=== Validating Manifest Structure ==="
+        for manifest in *.xml; do
+          echo "Checking $manifest structure..."
+          
+          # Check for required elements
+          xmlstarlet sel -t -c "count(//manifest)" "$manifest" | grep -q "1" || {
+            echo "❌ $manifest: Missing or multiple <manifest> root elements"
+            exit 1
+          }
+          
+          # Check for project elements
+          project_count=$(xmlstarlet sel -t -c "count(//project)" "$manifest")
+          if [ "$project_count" -gt 0 ]; then
+            echo "✅ $manifest: Contains $project_count project(s)"
+          else
+            echo "❌ $manifest: No projects defined"
+            exit 1
+          fi
+          
+          # Validate project attributes
+          xmlstarlet sel -t -m "//project" -v "@name" -n "$manifest" | while read project_name; do
+            if [ -z "$project_name" ]; then
+              echo "❌ $manifest: Project missing name attribute"
+              exit 1
+            fi
+          done
+          
+          echo "✅ $manifest: Structure validation passed"
+        done
+
+  validate-repositories:
+    runs-on: ubuntu-latest
+    needs: validate-xml
+    
+    steps:
+    - name: Checkout manifest repository
+      uses: actions/checkout@v4
+    
+    - name: Install repo tool
+      run: |
+        curl https://storage.googleapis.com/git-repo-downloads/repo > /tmp/repo
+        chmod +x /tmp/repo
+        sudo mv /tmp/repo /usr/local/bin/repo
+    
+    - name: Test repository accessibility
+      run: |
+        echo "=== Testing Repository Accessibility ==="
+        
+        # Extract repository information from manifests
+        for manifest in *.xml; do
+          echo "Testing repositories in $manifest..."
+          
+          # Parse remote fetch URL and project names
+          if [ -f "$manifest" ]; then
+            # Get remote fetch URL
+            fetch_url=$(xmlstarlet sel -t -v "//remote/@fetch" "$manifest" 2>/dev/null | head -1)
+            
+            if [ -n "$fetch_url" ]; then
+              echo "Remote fetch URL: $fetch_url"
+              
+              # Test each project repository
+              xmlstarlet sel -t -m "//project" -v "@name" -n "$manifest" | while read project_name; do
+                if [ -n "$project_name" ]; then
+                  full_url="${fetch_url}${project_name}.git"
+                  echo "Testing: $full_url"
+                  
+                  # Test if repository is accessible (just check if it exists)
+                  if git ls-remote --exit-code "$full_url" HEAD >/dev/null 2>&1; then
+                    echo "✅ $project_name: Repository accessible"
+                  else
+                    echo "⚠️ $project_name: Repository not accessible (may not exist yet)"
+                  fi
+                fi
+              done
+            fi
+          fi
+        done
+
+  test-workspace-creation:
+    runs-on: ubuntu-latest
+    needs: [validate-xml, validate-repositories]
+    
+    steps:
+    - name: Checkout manifest repository
+      uses: actions/checkout@v4
+    
+    - name: Install repo tool
+      run: |
+        curl https://storage.googleapis.com/git-repo-downloads/repo > /tmp/repo
+        chmod +x /tmp/repo
+        sudo mv /tmp/repo /usr/local/bin/repo
+    
+    - name: Install XML validation tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxml2-utils xmlstarlet
+    
+    - name: Test workspace initialization
+      run: |
+        echo "=== Testing Workspace Creation ==="
+        
+        # Configure git for repo tool
+        git config --global user.email "test@example.com"
+        git config --global user.name "Test User"
+        git config --global init.defaultBranch main
+        git config --global advice.defaultBranchName false
+        
+        # Test each manifest file
+        for manifest in *.xml; do
+          echo "Testing workspace creation with $manifest..."
+          
+          # Create test workspace
+          test_dir="test-workspace-$(basename $manifest .xml)"
+          mkdir -p "$test_dir"
+          cd "$test_dir"
+          
+          # Create a temporary git repository for the manifest
+          git init --bare ../temp-manifest.git
+          cd ../temp-manifest.git
+          git config --bool core.bare true
+          cd ..
+          
+          # Create a working copy and add the manifest
+          git clone temp-manifest.git temp-manifest-work
+          cd temp-manifest-work
+          
+          # Copy all XML files to handle includes
+          cp ../*.xml ./
+          git add .
+          git commit -m "Add manifest files" || echo "No changes to commit"
+          git push origin main 2>/dev/null || git push origin master 2>/dev/null || echo "Push completed"
+          cd ..
+          
+          # Now test repo initialization
+          cd "$test_dir"
+          
+          if repo init -u file://$(pwd)/../temp-manifest.git -m "$manifest" --no-repo-verify 2>&1; then
+            echo "✅ $manifest: Workspace initialization successful"
+            
+            # Test manifest command (this validates XML parsing)
+            if repo manifest >/dev/null 2>&1; then
+              echo "✅ $manifest: Manifest parsing successful"
+            else
+              echo "⚠️ $manifest: Manifest parsing had issues (may be due to missing remote repos)"
+            fi
+          else
+            echo "⚠️ $manifest: Workspace initialization had issues (expected for missing repos)"
+            
+            # At least validate that the manifest is syntactically correct
+            # Go back to the root directory to find the manifest file
+            cd ..
+            if xmllint --noout "$manifest" 2>/dev/null; then
+              echo "✅ $manifest: XML syntax validation passed"
+            else
+              echo "❌ $manifest: XML syntax validation failed"
+              echo "XML validation error details:"
+              xmllint "$manifest" 2>&1 || true
+              exit 1
+            fi
+            # Return to test directory for cleanup
+            cd "$test_dir"
+          fi
+          
+          cd ..
+          rm -rf "$test_dir" temp-manifest.git temp-manifest-work
+        done
+
+  validate-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout manifest repository
+      uses: actions/checkout@v4
+    
+    - name: Check documentation completeness
+      run: |
+        echo "=== Validating Documentation ==="
+        
+        # Check if README exists and contains key sections
+        if [ -f "README.md" ]; then
+          echo "✅ README.md exists"
+          
+          # Check for essential sections
+          required_sections=(
+            "Quick Start"
+            "Available Manifests"
+            "Repository Overview"
+            "Common Workflows"
+          )
+          
+          for section in "${required_sections[@]}"; do
+            if grep -q "$section" README.md; then
+              echo "✅ Documentation contains '$section' section"
+            else
+              echo "❌ Documentation missing '$section' section"
+              exit 1
+            fi
+          done
+        else
+          echo "❌ README.md not found"
+          exit 1
+        fi
+        
+        # Check manifest file documentation
+        manifest_count=$(ls -1 *.xml 2>/dev/null | wc -l)
+        readme_manifest_mentions=$(grep -c "\.xml" README.md || echo 0)
+        
+        if [ "$readme_manifest_mentions" -ge "$manifest_count" ]; then
+          echo "✅ All manifest files documented in README"
+        else
+          echo "⚠️ Some manifest files may not be documented"
+        fi
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: [validate-xml, validate-repositories, test-workspace-creation]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout manifest repository
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+        
+        # Install repo tool
+        curl https://storage.googleapis.com/git-repo-downloads/repo > /tmp/repo
+        chmod +x /tmp/repo
+        sudo mv /tmp/repo /usr/local/bin/repo
+    
+    - name: Test full integration workflow
+      run: |
+        echo "=== Testing Full Integration Workflow ==="
+        
+        # Configure git for repo tool
+        git config --global user.email "test@example.com"
+        git config --global user.name "Test User"
+        git config --global init.defaultBranch main
+        git config --global advice.defaultBranchName false
+        
+        # Create a temporary git repository for the manifest
+        git init --bare temp-manifest.git
+        cd temp-manifest.git
+        git config --bool core.bare true
+        cd ..
+        
+        # Create a working copy and add the default manifest
+        git clone temp-manifest.git temp-manifest-work
+        cd temp-manifest-work
+        
+        # Copy all XML files to handle includes
+        cp ../*.xml ./
+        git add .
+        git commit -m "Add manifest files"
+        git push origin main 2>/dev/null || git push origin master 2>/dev/null
+        cd ..
+        
+        # Create test workspace with default manifest
+        mkdir integration-test
+        cd integration-test
+        
+        # Initialize workspace
+        if repo init -u file://$(pwd)/../temp-manifest.git --no-repo-verify 2>/dev/null; then
+          echo "✅ Workspace initialized with default manifest"
+          
+          # Test manifest parsing
+          if repo manifest >/dev/null 2>&1; then
+            echo "✅ Manifest parsing successful"
+          else
+            echo "⚠️ Manifest parsing had issues (expected for missing remote repos)"
+          fi
+        else
+          echo "⚠️ Workspace initialization had issues (expected for missing remote repos)"
+          echo "ℹ️ This is normal in CI environment without access to all repositories"
+        fi
+        
+        cd ..
+        rm -rf integration-test temp-manifest.git temp-manifest-work

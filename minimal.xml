@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <!-- Minimal manifest - application development only -->
+  <default revision="main" 
+           remote="github"
+           sync-j="4" />
+
+  <remote name="github"
+          fetch="https://github.com/Demo-CI/" />
+
+  <!-- Application and its direct dependencies only -->
+  <project name="application"
+           path="application"
+           remote="github"
+           revision="main" />
+
+  <project name="static_library" 
+           path="libs/calculator"
+           remote="github"
+           revision="main" />
+</manifest>
