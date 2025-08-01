@@ -53,9 +53,9 @@ repo init -u https://github.com/Demo-CI/manifest.git
 repo sync
 
 # Build the project
-cd application
-make build-deps-repo  # Uses ../libs/calculator
-make
+# Navigate to build directory
+cd build
+./run.sh build all           # Clean → Build → Test → Analyze → Docs
 ```
 
 ### Workspace Structure (with repo tool)
@@ -95,85 +95,6 @@ repo init -u https://github.com/Demo-CI/manifest.git -m development.xml
 ```bash
 repo init -u https://github.com/Demo-CI/manifest.git -m production.xml
 ```
-- Pinned to stable version tags (v1.0.0)
-
-## GitHub Actions Integration
-
-### Centralized Build System
-
-The project uses a centralized build approach:
-
-1. **Source repositories** (`application`, `static_library`) trigger builds via repository dispatch
-2. **Build repository** contains the centralized workflow that:
-   - Clones all required repositories
-   - Builds static library and application
-   - Runs tests and analysis
-   - Collects artifacts
-
-### Triggering Builds
-
-Builds are automatically triggered when you push to:
-- `application` repository → triggers centralized build
-- `static_library` repository → triggers centralized build
-
-The centralized build workflow handles:
-- ✅ Cross-repository dependency management
-- ✅ Static library compilation
-- ✅ Application building and testing
-- ✅ Artifact collection
-- ✅ Build reporting
-
-## Development Workflow
-
-### Simple Development (Single Repository)
-```bash
-# Work on application only
-git clone https://github.com/Demo-CI/application.git
-cd application
-make build-deps  # Fetches library dependency
-make             # Build application
-# Make changes, commit, push → triggers centralized build
-```
-
-### Multi-Repository Development (with Repo)
-```bash
-# Sync all repositories
-repo sync
-
-# Make changes across repositories
-cd application
-# Edit application code...
-git add . && git commit -m "Update application"
-
-cd ../libs/calculator  
-# Edit library code...
-git add . && git commit -m "Update library"
-
-# Push changes
-cd application && git push
-cd ../libs/calculator && git push
-# Each push triggers the centralized build system
-```
-
-## Build Commands Reference
-
-### Application Build Commands
-```bash
-# Auto-detect build method (repo vs standalone)
-make
-
-# Build with external dependencies (standalone)
-make build-deps
-
-# Build with repo workspace dependencies
-make build-deps-repo
-
-# Run tests
-make test
-
-# Clean build artifacts
-make clean
-```
 
 ### Useful Repo Commands (if using multi-repo workspace)
 ```bash
@@ -192,51 +113,3 @@ repo list
 # Execute command across all repos
 repo forall -c 'git status'
 ```
-
-## Getting Started Examples
-
-### Example 1: Simple Application Development
-```bash
-# Clone and build application
-git clone https://github.com/Demo-CI/application.git
-cd application
-make  # Automatically fetches library and builds
-./calculator  # Run the application
-```
-
-### Example 2: Multi-Repository Development
-```bash
-# Create workspace with all repositories
-mkdir workspace && cd workspace
-repo init -u https://github.com/Demo-CI/manifest.git
-repo sync
-
-# Build everything
-cd application
-make build-deps-repo  # Uses local ../libs/calculator
-make
-```
-
-### Example 3: Library Development
-```bash
-# Work on the static library
-git clone https://github.com/Demo-CI/static_library.git
-cd static_library
-make static  # Build the library
-make test    # Test the library
-```
-
-## Project Goals
-
-This project demonstrates:
-- ✅ **Multi-repository management** using Google Repo tool
-- ✅ **Centralized CI/CD** with GitHub Actions
-- ✅ **Automated dependency management** between repositories
-- ✅ **Cross-repository build coordination**
-- ✅ **Simple C++ project structure** with external dependencies
-
-Perfect for learning:
-- Multi-repository workflows
-- GitHub Actions automation
-- C++ build system integration
-- Dependency management strategies
