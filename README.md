@@ -66,8 +66,51 @@ repo init -u https://github.com/Demo-CI/manifest.git -m production.xml
 ```
 - Production-ready stable versions
 
-## 🔧 **Repo Commands**
+## � **Repository Overview**
 
+| Repository | Description | Language | Purpose |
+|------------|-------------|----------|---------|
+| [application](https://github.com/Demo-CI/application) | Main calculator application | C++17 | End-user application with external dependencies |
+| [static_library](https://github.com/Demo-CI/static_library) | Math utilities library | C++17 | Reusable mathematical computation functions |
+| [build](https://github.com/Demo-CI/build) | Centralized CI/CD system | GitHub Actions | Automated build, test, and deployment workflows |
+| [manifest](https://github.com/Demo-CI/manifest) | Multi-repo workspace configuration | XML/Repo | Project structure and dependency management |
+
+## 🔧 **Common Workflows**
+
+### Development Workflow
+```bash
+# Setup workspace
+repo init -u https://github.com/Demo-CI/manifest.git -m development.xml
+repo sync
+
+# Make changes in any repository
+cd application  # or static_library
+# ... make your changes ...
+
+# Build and test locally
+cd ../build
+./scripts/build.sh build
+./scripts/build.sh test
+
+# Commit and push (triggers centralized CI)
+cd ../application
+git add . && git commit -m "feature: add new functionality"
+git push origin develop
+```
+
+### Production Release
+```bash
+# Use production manifest for stable builds
+repo init -u https://github.com/Demo-CI/manifest.git -m production.xml
+repo sync
+
+# Build production version
+cd build
+./scripts/build.sh build
+./scripts/build.sh test
+```
+
+### Repo Commands Reference
 ```bash
 # Sync all repositories
 repo sync
