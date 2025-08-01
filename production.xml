@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <!-- Production manifest - stable versions only -->
+  <default revision="refs/tags/v1.0.0" 
+           remote="github"
+           sync-j="4" />
+
+  <remote name="github"
+          fetch="https://github.com/Demo-CI/" />
+
+  <!-- Only essential repositories for production -->
+  <project name="application"
+           path="application"
+           remote="github"
+           revision="refs/tags/v1.0.0" />
+
+  <project name="static_library" 
+           path="libs/calculator"
+           remote="github"
+           revision="refs/tags/v1.0.0" />
+</manifest>

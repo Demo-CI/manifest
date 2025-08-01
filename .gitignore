@@ -1,0 +1,33 @@
+# Workspace directories (users should not commit workspaces)
+demo-ci-workspace/
+test-workspace*/
+workspace*/
+
+# Repo tool metadata (for testing)
+.repo/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts from test workspaces
+build/
+*.o
+*.exe
+calculator
+test_runner
+
+# Generated documentation
+docs/
